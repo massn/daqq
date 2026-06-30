@@ -1,0 +1,18 @@
+# Cloudflare Worker: daqq data relay.
+#
+# ConoHa pushes a sanitized snapshot of the node's /gui data to POST /ingest
+# (bearer-authenticated); the Worker stores it in KV and serves it back at
+# GET /gui/<kind> with permissive CORS so the static Pages GUI can read it live.
+#
+# Setup (run from this directory with an authenticated wrangler):
+#   wrangler kv namespace create DAQQ_DATA      # copy the printed id into below
+#   wrangler secret put INGEST_TOKEN            # paste the shared ingest token
+#   wrangler deploy                             # prints https://daqq-data.<you>.workers.dev
+name = "daqq-data"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "DAQQ_DATA"
+id = "c325af0375934758a78b70ce0ebbdc82"

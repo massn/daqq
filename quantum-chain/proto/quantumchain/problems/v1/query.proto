@@ -1,0 +1,71 @@
+syntax = "proto3";
+package quantumchain.problems.v1;
+
+import "amino/amino.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "quantumchain/problems/v1/params.proto";
+import "quantumchain/problems/v1/types.proto";
+
+option go_package = "quantum-chain/x/problems/types";
+
+// Query defines the gRPC querier service.
+service Query {
+  // Parameters queries the parameters of the module.
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/quantum-chain/problems/v1/params";
+  }
+
+  // ListProblems returns all registered problems, optionally paginated.
+  rpc ListProblems(QueryListProblemsRequest) returns (QueryListProblemsResponse) {
+    option (google.api.http).get = "/quantum-chain/problems/v1/problems";
+  }
+
+  // GetProblem returns the problem with the given ID.
+  rpc GetProblem(QueryGetProblemRequest) returns (QueryGetProblemResponse) {
+    option (google.api.http).get = "/quantum-chain/problems/v1/problems/{id}";
+  }
+
+  // GetProblemByName returns the problem registered under the given unique name.
+  rpc GetProblemByName(QueryGetProblemByNameRequest) returns (QueryGetProblemByNameResponse) {
+    option (google.api.http).get = "/quantum-chain/problems/v1/problems_by_name/{name}";
+  }
+}
+
+// QueryParamsRequest is request type for the Query/Params RPC method.
+message QueryParamsRequest {}
+
+// QueryParamsResponse is response type for the Query/Params RPC method.
+message QueryParamsResponse {
+  // params holds all the parameters of this module.
+  Params params = 1 [
+    (gogoproto.nullable) = false,
+    (amino.dont_omitempty) = true
+  ];
+}
+
+message QueryListProblemsRequest {
+  cosmos.base.query.v1beta1.PageRequest pagination = 1;
+}
+
+message QueryListProblemsResponse {
+  repeated Problem problems = 1 [(gogoproto.nullable) = false];
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+message QueryGetProblemRequest {
+  uint64 id = 1;
+}
+
+message QueryGetProblemResponse {
+  Problem problem = 1 [(gogoproto.nullable) = false];
+}
+
+message QueryGetProblemByNameRequest {
+  string name = 1;
+}
+
+message QueryGetProblemByNameResponse {
+  Problem problem = 1 [(gogoproto.nullable) = false];
+}

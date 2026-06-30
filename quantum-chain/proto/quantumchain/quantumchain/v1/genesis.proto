@@ -1,0 +1,17 @@
+syntax = "proto3";
+package quantumchain.quantumchain.v1;
+
+import "amino/amino.proto";
+import "gogoproto/gogo.proto";
+import "quantumchain/quantumchain/v1/params.proto";
+
+option go_package = "quantum-chain/x/quantumchain/types";
+
+// GenesisState defines the quantumchain module's genesis state.
+message GenesisState {
+  // params defines all the parameters of the module.
+  Params params = 1 [
+    (gogoproto.nullable) = false,
+    (amino.dont_omitempty) = true
+  ];
+}

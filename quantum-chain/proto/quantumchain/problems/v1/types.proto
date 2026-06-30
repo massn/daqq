@@ -1,0 +1,35 @@
+syntax = "proto3";
+package quantumchain.problems.v1;
+
+option go_package = "quantum-chain/x/problems/types";
+
+// ProblemKind identifies the implementation strategy for a registered problem.
+// Only BUILTIN is supported in the MVP; WASM is reserved for the future.
+enum ProblemKind {
+  PROBLEM_KIND_UNSPECIFIED = 0;
+  PROBLEM_KIND_BUILTIN = 1;
+  // PROBLEM_KIND_WASM = 2; // reserved for future use
+}
+
+// Problem is the on-chain registry entry for a daqq problem.
+//
+// Problems are append-only: once added, the entry stays forever. Stopping
+// submissions is done by flipping `enabled` to false via gov; the historical
+// data remains queryable.
+message Problem {
+  // Monotonically increasing identifier assigned by the registry. Never reused.
+  uint64 id = 1;
+  // Unique human-readable name (e.g. "random_circuit"). Unique across all
+  // problems, including disabled ones.
+  string name = 2;
+  // Cosmos module that implements this problem (e.g. "random_circuit").
+  string module_name = 3;
+  // Implementation strategy. BUILTIN for the MVP.
+  ProblemKind kind = 4;
+  // Whether new submissions are accepted. Disabled problems still serve reads.
+  bool enabled = 5;
+  // Beacon round in which this problem became selectable.
+  uint64 added_at_round = 6;
+  // Short human-readable summary.
+  string description = 7;
+}

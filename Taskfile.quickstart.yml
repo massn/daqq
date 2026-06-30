@@ -1,0 +1,242 @@
+version: '3'
+
+vars:
+  CHAIN_ID: quantum-chain
+  HOME_DIR: '{{.HOME}}/.quantumchain'
+  NET_ROOT: '{{.HOME}}/daqq-localnet'
+  HOME_A: '{{.HOME}}/daqq-localnet/alice'
+  HOME_B: '{{.HOME}}/daqq-localnet/bob'
+  HOME_C: '{{.HOME}}/daqq-localnet/carol'
+
+tasks:
+  # ----------------------------------------------------------------------
+  # Circuit Generator
+  # ----------------------------------------------------------------------
+  circuit:
+    desc: Run the random quantum circuit generator
+    cmds:
+      - go run main.go
+
+  # ----------------------------------------------------------------------
+  # GUI preview (mock data, no live chain)
+  # ----------------------------------------------------------------------
+  gui:preview:
+    desc: Serve the web GUI with mock data on :8787 for quick iteration
+    cmds:
+      - python3 quantum-chain/app/gui/devserver.py
+
+  # ----------------------------------------------------------------------
+  # Build
+  # ----------------------------------------------------------------------
+  install:
+    desc: Install quantumchaind binary into $GOPATH/bin
+    dir: quantum-chain
+    cmds:
+      - make install
+
+  # ----------------------------------------------------------------------
+  # Quick Start: single-node chain
+  # ----------------------------------------------------------------------
+  quickstart:
+    desc: Initialize and start a single-node quantum chain
+    cmds:
+      - task: quickstart:init
+      - task: quickstart:start
+
+  quickstart:init:
+    desc: Initialize a single-node home directory (run once)
+    cmds:
+      - quantumchaind init mynode --chain-id {{.CHAIN_ID}} --home {{.HOME_DIR}}
+      - sed -i '' 's/^minimum-gas-prices = .*/minimum-gas-prices = "0stake"/' {{.HOME_DIR}}/config/app.toml
+      # enable the REST API, which also serves the built-in web visualizer at /gui
+      - sed -i '' 's/^enable = false/enable = true/' {{.HOME_DIR}}/config/app.toml
+      - quantumchaind keys add alice --home {{.HOME_DIR}} --keyring-backend test
+      - |
+        ALICE_ADDR=$(quantumchaind keys show alice -a --home {{.HOME_DIR}} --keyring-backend test)
+        quantumchaind genesis add-genesis-account $ALICE_ADDR 200000000stake --home {{.HOME_DIR}}
+        quantumchaind genesis gentx alice 100000000stake --chain-id {{.CHAIN_ID}} \
+          --home {{.HOME_DIR}} --keyring-backend test
+        quantumchaind genesis collect-gentxs --home {{.HOME_DIR}}
+    status:
+      - test -f {{.HOME_DIR}}/config/genesis.json
+      - test -d {{.HOME_DIR}}/config/gentx
+
+  quickstart:start:
+    desc: Start the single-node quantum chain
+    cmds:
+      - quantumchaind start --home {{.HOME_DIR}}
+
+  quickstart:clean:
+    desc: Remove the single-node home directory
+    prompt: This will delete {{.HOME_DIR}}. Continue?
+    cmds:
+      - rm -rf {{.HOME_DIR}}
+
+  # ----------------------------------------------------------------------
+  # Beacon (shared randomness) agent
+  # ----------------------------------------------------------------------
+  beacon:loop:
+    desc: Continuously commit & reveal so the beacon produces shared random seeds (run in its own terminal while the node is up)
+    vars:
+      RPC: '{{.RPC | default "http://localhost:26657"}}'
+    cmds:
+      - |
+        set -u
+        committed_round=""; saved_secret=""; revealed_round=""
+        echo "Beacon agent started (alice). Ctrl+C to stop."
+        # A round spans 50 blocks: commit in offset 0-30, reveal in 31-45,
+        # finalize at the next boundary. We stay clear of the edges for tx lag.
+        while true; do
+          H=$(curl -s {{.RPC}}/status | jq -r .result.sync_info.latest_block_height 2>/dev/null)
+          if [ -z "$H" ] || [ "$H" = "null" ]; then echo "waiting for node..."; sleep 3; continue; fi
+          R=$((H / 50)); O=$((H % 50))
+          if [ "$O" -le 28 ] && [ "$committed_round" != "$R" ]; then
+            saved_secret=$(openssl rand -hex 32)
+            hash=$(printf %s "$saved_secret" | shasum -a 256 | awk '{print $1}')
+            code=$(quantumchaind tx beacon commit "$R" "$hash" --from alice --chain-id {{.CHAIN_ID}} --home {{.HOME_DIR}} --keyring-backend test --yes -o json 2>/dev/null | jq -r .code)
+            if [ "$code" = "0" ]; then echo "round $R (h=$H o=$O): committed"; committed_round=$R; fi
+          fi
+          if [ "$O" -ge 32 ] && [ "$O" -le 43 ] && [ "$committed_round" = "$R" ] && [ "$revealed_round" != "$R" ]; then
+            code=$(quantumchaind tx beacon reveal "$R" "$saved_secret" --from alice --chain-id {{.CHAIN_ID}} --home {{.HOME_DIR}} --keyring-backend test --yes -o json 2>/dev/null | jq -r .code)
+            if [ "$code" = "0" ]; then echo "round $R (h=$H o=$O): revealed -> seed finalizes next round"; revealed_round=$R; fi
+          fi
+          sleep 3
+        done
+
+  # ----------------------------------------------------------------------
+  # GUI Visualizer
+  # ----------------------------------------------------------------------
+  gui:
+    desc: Open the node's built-in web visualizer in your browser (the node must be running)
+    cmds:
+      - open http://localhost:1317/gui/
+
+  # ----------------------------------------------------------------------
+  # Quick Start: 3-node distributed ledger on a single PC
+  # ----------------------------------------------------------------------
+  localnet:init:
+    desc: Initialize a 3-node localnet (alice / bob / carol)
+    cmds:
+      - mkdir -p {{.NET_ROOT}}
+      # 1. init each node
+      - quantumchaind init alice --chain-id {{.CHAIN_ID}} --home {{.HOME_A}}
+      - quantumchaind init bob   --chain-id {{.CHAIN_ID}} --home {{.HOME_B}}
+      - quantumchaind init carol --chain-id {{.CHAIN_ID}} --home {{.HOME_C}}
+      # require zero gas (no-reward ledger)
+      - sed -i '' 's/^minimum-gas-prices = .*/minimum-gas-prices = "0stake"/' {{.HOME_A}}/config/app.toml
+      - sed -i '' 's/^minimum-gas-prices = .*/minimum-gas-prices = "0stake"/' {{.HOME_B}}/config/app.toml
+      - sed -i '' 's/^minimum-gas-prices = .*/minimum-gas-prices = "0stake"/' {{.HOME_C}}/config/app.toml
+      # enable the REST API on each node, which also serves the web visualizer at /gui
+      - sed -i '' 's/^enable = false/enable = true/' {{.HOME_A}}/config/app.toml
+      - sed -i '' 's/^enable = false/enable = true/' {{.HOME_B}}/config/app.toml
+      - sed -i '' 's/^enable = false/enable = true/' {{.HOME_C}}/config/app.toml
+      # 2. keys and genesis accounts (stake only, no reward tokens)
+      - quantumchaind keys add alice --home {{.HOME_A}} --keyring-backend test
+      - quantumchaind keys add bob   --home {{.HOME_B}} --keyring-backend test
+      - quantumchaind keys add carol --home {{.HOME_C}} --keyring-backend test
+      - |
+        ALICE_ADDR=$(quantumchaind keys show alice -a --home {{.HOME_A}} --keyring-backend test)
+        BOB_ADDR=$(quantumchaind keys show bob     -a --home {{.HOME_B}} --keyring-backend test)
+        CAROL_ADDR=$(quantumchaind keys show carol -a --home {{.HOME_C}} --keyring-backend test)
+        quantumchaind genesis add-genesis-account $ALICE_ADDR 200000000stake --home {{.HOME_A}}
+        quantumchaind genesis add-genesis-account $BOB_ADDR   200000000stake --home {{.HOME_A}}
+        quantumchaind genesis add-genesis-account $CAROL_ADDR 200000000stake --home {{.HOME_A}}
+      # 3. gentx — each node signs from its own home, then aggregate into alice
+      - cp {{.HOME_A}}/config/genesis.json {{.HOME_B}}/config/genesis.json
+      - cp {{.HOME_A}}/config/genesis.json {{.HOME_C}}/config/genesis.json
+      - quantumchaind genesis gentx alice 100000000stake --chain-id {{.CHAIN_ID}} --home {{.HOME_A}} --keyring-backend test
+      - quantumchaind genesis gentx bob   100000000stake --chain-id {{.CHAIN_ID}} --home {{.HOME_B}} --keyring-backend test
+      - quantumchaind genesis gentx carol 100000000stake --chain-id {{.CHAIN_ID}} --home {{.HOME_C}} --keyring-backend test
+      - cp {{.HOME_B}}/config/gentx/*.json {{.HOME_A}}/config/gentx/
+      - cp {{.HOME_C}}/config/gentx/*.json {{.HOME_A}}/config/gentx/
+      - quantumchaind genesis collect-gentxs --home {{.HOME_A}}
+      - quantumchaind genesis validate --home {{.HOME_A}}
+      # distribute the final genesis
+      - cp {{.HOME_A}}/config/genesis.json {{.HOME_B}}/config/genesis.json
+      - cp {{.HOME_A}}/config/genesis.json {{.HOME_C}}/config/genesis.json
+      # 4. ports and peers (macOS sed; on Linux drop the empty '' argument)
+      - sed -i '' 's/:26656/:26666/g; s/:26657/:26667/g' {{.HOME_B}}/config/config.toml
+      - sed -i '' 's/:1317/:1318/g;  s/:9090/:9091/g'   {{.HOME_B}}/config/app.toml
+      - sed -i '' 's/:26656/:26676/g; s/:26657/:26677/g' {{.HOME_C}}/config/config.toml
+      - sed -i '' 's/:1317/:1319/g;  s/:9090/:9092/g'   {{.HOME_C}}/config/app.toml
+      - |
+        ID_A=$(quantumchaind comet show-node-id --home {{.HOME_A}})
+        ID_B=$(quantumchaind comet show-node-id --home {{.HOME_B}})
+        ID_C=$(quantumchaind comet show-node-id --home {{.HOME_C}})
+        PEERS_A="$ID_B@127.0.0.1:26666,$ID_C@127.0.0.1:26676"
+        PEERS_B="$ID_A@127.0.0.1:26656,$ID_C@127.0.0.1:26676"
+        PEERS_C="$ID_A@127.0.0.1:26656,$ID_B@127.0.0.1:26666"
+        sed -i '' "s/^persistent_peers = .*/persistent_peers = \"$PEERS_A\"/" {{.HOME_A}}/config/config.toml
+        sed -i '' "s/^persistent_peers = .*/persistent_peers = \"$PEERS_B\"/" {{.HOME_B}}/config/config.toml
+        sed -i '' "s/^persistent_peers = .*/persistent_peers = \"$PEERS_C\"/" {{.HOME_C}}/config/config.toml
+      - sed -i '' 's/^allow_duplicate_ip = .*/allow_duplicate_ip = true/' {{.HOME_A}}/config/config.toml
+      - sed -i '' 's/^allow_duplicate_ip = .*/allow_duplicate_ip = true/' {{.HOME_B}}/config/config.toml
+      - sed -i '' 's/^allow_duplicate_ip = .*/allow_duplicate_ip = true/' {{.HOME_C}}/config/config.toml
+    status:
+      - test -f {{.HOME_A}}/config/genesis.json
+      - test -f {{.HOME_B}}/config/genesis.json
+      - test -f {{.HOME_C}}/config/genesis.json
+
+  localnet:start:alice:
+    desc: Start the alice node (run in its own terminal)
+    cmds:
+      - quantumchaind start --home {{.HOME_A}}
+
+  localnet:start:bob:
+    desc: Start the bob node (run in its own terminal)
+    cmds:
+      - quantumchaind start --home {{.HOME_B}}
+
+  localnet:start:carol:
+    desc: Start the carol node (run in its own terminal)
+    cmds:
+      - quantumchaind start --home {{.HOME_C}}
+
+  localnet:status:
+    desc: Show latest block height / hash and peer count for all 3 nodes
+    cmds:
+      - |
+        for port in 26657 26667 26677; do
+          echo "--- localhost:$port ---"
+          curl -s localhost:$port/block | jq '.result.block.header | {height, hash: .last_block_id.hash}'
+          curl -s localhost:$port/net_info | jq '{n_peers: .result.n_peers}'
+        done
+
+  localnet:clean:
+    desc: Remove the entire localnet home directory tree
+    prompt: This will delete {{.NET_ROOT}}. Continue?
+    cmds:
+      - rm -rf {{.NET_ROOT}}
+
+  # ----------------------------------------------------------------------
+  # Testing / lint / proto
+  # ----------------------------------------------------------------------
+  test:
+    desc: Run quantum chain tests
+    dir: quantum-chain
+    cmds:
+      - make test
+
+  test-unit:
+    desc: Run quantum chain unit tests
+    dir: quantum-chain
+    cmds:
+      - make test-unit
+
+  lint:
+    desc: Run linter on quantum chain
+    dir: quantum-chain
+    cmds:
+      - make lint
+
+  lint-fix:
+    desc: Run linter and fix issues
+    dir: quantum-chain
+    cmds:
+      - make lint-fix
+
+  proto:
+    desc: Generate protobuf files
+    dir: quantum-chain
+    cmds:
+      - make proto-gen

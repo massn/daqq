@@ -1,0 +1,15 @@
+vue/node_modules
+vue/dist
+release/
+.idea/
+.vscode/
+.DS_Store
+*.dot
+*.log
+*.ign
+
+# Chain binaries (root-level build outputs only). Leading "/" anchors to this
+# directory so the cmd/qc-client and cmd/quantumchaind SOURCE dirs stay tracked.
+/qc-client
+/quantumchaind
+/quantum-chaind

@@ -1,0 +1,57 @@
+syntax = "proto3";
+package quantumchain.problems.v1;
+
+import "amino/amino.proto";
+import "cosmos/msg/v1/msg.proto";
+import "cosmos_proto/cosmos.proto";
+import "gogoproto/gogo.proto";
+import "quantumchain/problems/v1/params.proto";
+
+option go_package = "quantum-chain/x/problems/types";
+
+// Msg defines the Msg service.
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  // UpdateParams defines a (governance) operation for updating the module
+  // parameters. The authority defaults to the x/gov module account.
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+
+  // SetProblemEnabled toggles the `enabled` flag on a registered problem.
+  // Governance-gated: only the configured authority (defaults to x/gov) may
+  // call it. Used to disable a problem without removing it from the registry.
+  rpc SetProblemEnabled(MsgSetProblemEnabled) returns (MsgSetProblemEnabledResponse);
+}
+
+// MsgUpdateParams is the Msg/UpdateParams request type.
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+  option (amino.name) = "quantumchain/x/problems/MsgUpdateParams";
+
+  // authority is the address that controls the module (defaults to x/gov unless overwritten).
+  string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+
+  // params defines the module parameters to update.
+  //
+  // NOTE: All parameters must be supplied.
+  Params params = 2 [
+    (gogoproto.nullable) = false,
+    (amino.dont_omitempty) = true
+  ];
+}
+
+// MsgUpdateParamsResponse defines the response structure for executing a
+// MsgUpdateParams message.
+message MsgUpdateParamsResponse {}
+
+// MsgSetProblemEnabled flips the `enabled` flag of an existing problem.
+message MsgSetProblemEnabled {
+  option (cosmos.msg.v1.signer) = "authority";
+  option (amino.name) = "quantumchain/x/problems/MsgSetProblemEnabled";
+
+  string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  uint64 id = 2;
+  bool enabled = 3;
+}
+
+message MsgSetProblemEnabledResponse {}

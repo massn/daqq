@@ -1,0 +1,17 @@
+syntax = "proto3";
+package quantumchain.random_circuit.v1;
+
+import "amino/amino.proto";
+import "gogoproto/gogo.proto";
+import "quantumchain/random_circuit/v1/params.proto";
+
+option go_package = "quantum-chain/x/random_circuit/types";
+
+// GenesisState defines the random_circuit module's genesis state.
+message GenesisState {
+  // params defines all the parameters of the module.
+  Params params = 1 [
+    (gogoproto.nullable) = false,
+    (amino.dont_omitempty) = true
+  ];
+}

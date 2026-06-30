@@ -1,0 +1,3 @@
+# Cosmos SDK `in-place-testnet` scaffolding example key in cmd.Example help text.
+# This is upstream boilerplate (same value across all Cosmos SDK projects), not a real secret.
+quantum-chain/cmd/quantumchaind/cmd/testnet.go:generic-api-key:54

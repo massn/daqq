@@ -1,0 +1,13 @@
+syntax = "proto3";
+package quantumchain.random_circuit.v1;
+
+import "amino/amino.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "quantum-chain/x/random_circuit/types";
+
+// Params defines the parameters for the module.
+message Params {
+  option (amino.name) = "quantumchain/x/random_circuit/Params";
+  option (gogoproto.equal) = true;
+}

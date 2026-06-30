@@ -1,0 +1,44 @@
+syntax = "proto3";
+package quantumchain.random_circuit.v1;
+
+import "gogoproto/gogo.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "quantum-chain/x/random_circuit/types";
+
+// Distribution carries the theoretical (case A) probability distribution
+// produced by a participant solving a random-circuit problem.
+//
+// It is a list of (state, probability) entries: each `state` is a
+// computational-basis state (e.g. "00101") and each `probability` is encoded as
+// a fixed-point decimal string. String encoding keeps the canonical proto
+// representation deterministic across SDKs and avoids floating-point round-off
+// in consensus. Entries are sorted by `state` so that independent participants
+// produce a byte-identical message for the same circuit.
+//
+// NOTE: this is a `repeated` list rather than a proto `map` on purpose — the
+// Cosmos SDK tx codec does not support map fields inside signed messages
+// ("maps are not supported"), so a Msg payload must avoid them.
+//
+// TODO: When the `random_circuit_sampling` module is introduced for case B,
+// it will use its own payload type (e.g. ShotCounts) rather than reusing this
+// Distribution message.
+message Distribution {
+  repeated ProbabilityEntry entries = 1 [(gogoproto.nullable) = false];
+}
+
+// ProbabilityEntry is one (basis state -> probability) pair of a Distribution.
+message ProbabilityEntry {
+  string state = 1;
+  string probability = 2;
+}
+
+message ResultData {
+  string address = 1;
+  Distribution distribution = 2 [(gogoproto.nullable) = false];
+  google.protobuf.Timestamp submitted_at = 3 [
+    (gogoproto.stdtime) = true,
+    (gogoproto.nullable) = false
+  ];
+  int64 block_height = 4;
+}

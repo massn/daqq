@@ -1,0 +1,106 @@
+# Site
+baseURL: "https://daqq.pages.dev/"
+
+# Multilingual
+defaultContentLanguage: en
+defaultContentLanguageInSubdir: false
+
+languages:
+  en:
+    languageName: EN
+    languageCode: en-us
+    weight: 1
+    title: "daqq Docs"
+    params:
+      description: "Documentation for daqq — a no-reward distributed ledger for shared quantum randomness."
+    menu:
+      main:
+        - name: Docs
+          pageRef: /docs
+          weight: 1
+        - name: GitHub
+          weight: 2
+          url: "https://github.com/massn/daqq"
+          params:
+            icon: github
+        - name: Language
+          weight: 3
+          params:
+            type: language-switch
+            label: true
+        - name: Theme
+          weight: 4
+          params:
+            type: theme-toggle
+  ja:
+    languageName: JA
+    languageCode: ja
+    weight: 2
+    title: "daqq ドキュメント"
+    params:
+      description: "daqq のドキュメント — 共有された量子ランダム性のための、無報酬の分散台帳。"
+    menu:
+      main:
+        - name: ドキュメント
+          pageRef: /docs
+          weight: 1
+        - name: GitHub
+          weight: 2
+          url: "https://github.com/massn/daqq"
+          params:
+            icon: github
+        - name: 言語
+          weight: 3
+          params:
+            type: language-switch
+            label: true
+        - name: テーマ
+          weight: 4
+          params:
+            type: theme-toggle
+
+# Hextra is loaded via Hugo Module
+module:
+  imports:
+    - path: github.com/imfing/hextra
+
+enableRobotsTXT: true
+enableGitInfo: true
+
+# Hextra uses these
+markup:
+  highlight:
+    noClasses: false
+  goldmark:
+    renderer:
+      unsafe: true
+    extensions:
+      passthrough:
+        delimiters:
+          block: [['\[', '\]'], ['$$', '$$']]
+          inline: [['\(', '\)']]
+        enable: true
+
+params:
+  description: "Documentation for daqq — a no-reward distributed ledger for shared quantum randomness."
+
+  navbar:
+    displayTitle: true
+    displayLogo: false
+
+  theme:
+    default: system
+    displayToggle: true
+
+  footer:
+    enable: true
+    displayCopyright: true
+    displayPoweredBy: true
+
+  editURL:
+    enable: true
+    base: "https://github.com/massn/daqq/edit/main/docs/content"
+
+  math:
+    enable: true
+    engine: katex

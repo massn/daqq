@@ -1,0 +1,11 @@
+[Unit]
+Description=daqq: periodic data push to the Worker (every 2 min)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+AccuracySec=15s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

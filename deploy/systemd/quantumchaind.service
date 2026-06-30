@@ -1,0 +1,36 @@
+# daqq quantum-chain node, run under Cosmovisor so a governance-approved
+# software upgrade swaps in the new binary at its height with no manual
+# downtime ("hot swap").
+#
+# Install on the node:
+#   sudo cp deploy/systemd/quantumchaind.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now quantumchaind
+#
+# Prerequisites: run deploy/scripts/setup-cosmovisor.sh first so the
+# $DAEMON_HOME/cosmovisor layout and the genesis binary exist.
+# Adjust User= and the /home/ubuntu paths if the node runs as another user.
+
+[Unit]
+Description=daqq quantum-chain node (via Cosmovisor)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ubuntu
+# Start THROUGH cosmovisor, not quantumchaind directly, so it can swap binaries.
+ExecStart=/home/ubuntu/go/bin/cosmovisor run start --home /home/ubuntu/.quantumchain
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=65535
+
+# Cosmovisor runtime configuration (mirrors deploy/scripts/setup-cosmovisor.sh).
+Environment=DAEMON_NAME=quantumchaind
+Environment=DAEMON_HOME=/home/ubuntu/.quantumchain
+Environment=DAEMON_ALLOW_DOWNLOAD_BINARIES=false
+Environment=DAEMON_RESTART_AFTER_UPGRADE=true
+# cosmovisor execs the daemon, which needs Go's bin dir on PATH.
+Environment=PATH=/usr/local/go/bin:/home/ubuntu/go/bin:/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=multi-user.target

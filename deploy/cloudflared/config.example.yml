@@ -1,0 +1,29 @@
+# Cloudflare Tunnel config for publishing ONLY the daqq /gui visualizer.
+#
+# Copy to ~/.cloudflared/config.yml on the node and fill in the placeholders:
+#   <TUNNEL_ID>  - from `cloudflared tunnel create daqq`
+#   <HOSTNAME>   - the public hostname you route, e.g. daqq.example.com
+#
+# Design rule: the node's REST API (:1317) also exposes non-GUI endpoints
+# (tx broadcast, etc.). We forward ONLY /gui* to it and 404 everything else,
+# so nothing but the read-only visualizer is reachable from the internet.
+# RPC (26657) and gRPC (9090) are never tunneled.
+#
+# Then route DNS and install as a service:
+#   cloudflared tunnel route dns daqq <HOSTNAME>
+#   sudo cloudflared --config ~/.cloudflared/config.yml service install
+
+tunnel: <TUNNEL_ID>
+credentials-file: /home/ubuntu/.cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  # /gui and everything under it -> the node's local REST API
+  - hostname: <HOSTNAME>
+    path: ^/gui.*
+    service: http://127.0.0.1:1317
+  # bare root -> let it through so the node can redirect / to /gui/
+  - hostname: <HOSTNAME>
+    path: ^/$
+    service: http://127.0.0.1:1317
+  # everything else is blocked (hides the non-GUI REST endpoints)
+  - service: http_status:404

@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package quantumchain.random_circuit.v1;
+
+import "amino/amino.proto";
+import "cosmos/msg/v1/msg.proto";
+import "cosmos_proto/cosmos.proto";
+import "gogoproto/gogo.proto";
+import "quantumchain/random_circuit/v1/params.proto";
+import "quantumchain/random_circuit/v1/types.proto";
+
+option go_package = "quantum-chain/x/random_circuit/types";
+
+// Msg defines the Msg service.
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  // UpdateParams defines a (governance) operation for updating the module
+  // parameters. The authority defaults to the x/gov module account.
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+
+  // SubmitResult defines the SubmitResult RPC.
+  rpc SubmitResult(MsgSubmitResult) returns (MsgSubmitResultResponse);
+}
+
+// MsgUpdateParams is the Msg/UpdateParams request type.
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+  option (amino.name) = "quantumchain/x/random_circuit/MsgUpdateParams";
+
+  // authority is the address that controls the module (defaults to x/gov unless overwritten).
+  string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+
+  // params defines the module parameters to update.
+
+  // NOTE: All parameters must be supplied.
+  Params params = 2 [
+    (gogoproto.nullable) = false,
+    (amino.dont_omitempty) = true
+  ];
+}
+
+// MsgUpdateParamsResponse defines the response structure for executing a
+// MsgUpdateParams message.
+message MsgUpdateParamsResponse {}
+
+// MsgSubmitResult defines the MsgSubmitResult message.
+//
+// The submitted solution is the theoretical probability distribution (case A)
+// the participant computed for the random circuit identified by round_id.
+//
+// TODO: A future `random_circuit_sampling` module will define a separate
+// problem whose solution carries empirical shot counts (case B). This module
+// stays focused on the analytical/theoretical distribution.
+message MsgSubmitResult {
+  option (cosmos.msg.v1.signer) = "creator";
+  string creator = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  uint64 round_id = 2;
+  Distribution distribution = 3 [(gogoproto.nullable) = false];
+}
+
+// MsgSubmitResultResponse defines the MsgSubmitResultResponse message.
+message MsgSubmitResultResponse {}

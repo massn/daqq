@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd LaunchDaemon for the daqq quantum-chain node on macOS.
+
+  This runs quantumchaind directly (not under Cosmovisor) for a simple,
+  always-on local node: RunAtLoad starts it at boot, KeepAlive restarts it if
+  it ever exits. Only the embedded /gui is meant to be exposed, via a separate
+  cloudflared tunnel (outbound) — see deploy/macos/README.md.
+
+  The __USER__ / __HOME__ placeholders are filled in by deploy/macos/setup-mac.sh
+  before it is copied to /Library/LaunchDaemons/. To run the node THROUGH
+  Cosmovisor instead (for governance hot-swaps), see the note in the runbook.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.daqq.quantumchaind</string>
+
+  <!-- Run as the regular user (not root) so it uses ~/.quantumchain. -->
+  <key>UserName</key>
+  <string>__USER__</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>__HOME__/go/bin/quantumchaind</string>
+    <string>start</string>
+    <string>--home</string>
+    <string>__HOME__/.quantumchain</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- Intel Homebrew lives in /usr/local; Go's bin holds quantumchaind. -->
+    <key>PATH</key>
+    <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:__HOME__/go/bin</string>
+    <key>HOME</key>
+    <string>__HOME__</string>
+  </dict>
+
+  <!-- Start at boot and keep it alive 24/7 (launchd throttles respawns to >=10s). -->
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ProcessType</key>
+  <string>Background</string>
+
+  <key>StandardOutPath</key>
+  <string>__HOME__/Library/Logs/daqq/quantumchaind.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/Library/Logs/daqq/quantumchaind.err.log</string>
+</dict>
+</plist>

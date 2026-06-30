@@ -1,0 +1,13 @@
+[Unit]
+Description=daqq: push sanitized /gui snapshot to the daqq-data Worker
+After=network-online.target quantumchaind.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/daqq
+EnvironmentFile=/root/.daqq-data.env
+ExecStart=/root/daqq/deploy/scripts/push-data.sh
+TimeoutStartSec=60
+Nice=10

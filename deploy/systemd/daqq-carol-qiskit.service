@@ -1,0 +1,19 @@
+[Unit]
+Description=daqq Qiskit reference result submitter (carol)
+After=network-online.target quantumchaind3.service
+Wants=network-online.target
+
+[Service]
+Environment=QC_API=http://localhost:1317
+Environment=QC_BIN=/root/go/bin/quantumchaind
+Environment=QC_RPC=tcp://localhost:26677
+Environment=QC_FROM=carol
+Environment=QC_HOME=/root/.quantumchain3
+Environment=QC_KEYRING_BACKEND=test
+Environment=QC_CHAIN_ID=quantum-chain
+ExecStart=/root/qiskit-venv/bin/python /root/daqq/deploy/qiskit/carol_client.py run
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
