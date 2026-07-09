@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 436 168" width="436" height="168">
+  <defs></defs>
+  <rect width="436" height="168" fill="#14151a"></rect>
+  <g font-family="SG" font-weight="600" font-size="120" fill="#f4f3ef">
+    <text x="24.00" y="112.80">da</text>
+    <text x="216.72" y="112.80">qq</text>
+  </g>
+  <g fill="none" stroke="#9d82e8" stroke-width="6.96" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M211.32 28.80 L189.00 72.00 L211.32 115.20"></path>
+    <path d="M375.48 28.80 L397.80 72.00 L375.48 115.20"></path>
+  </g>
+</svg>

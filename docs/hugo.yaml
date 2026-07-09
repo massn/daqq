@@ -85,8 +85,13 @@ params:
   description: "Documentation for daqq — a no-reward distributed ledger for shared quantum randomness."
 
   navbar:
-    displayTitle: true
-    displayLogo: false
+    displayTitle: false
+    displayLogo: true
+    logo:
+      path: logo/daqq-wordmark-ink.png
+      dark: logo/daqq-wordmark-reversed.png
+      width: 83
+      height: 30
 
   theme:
     default: system

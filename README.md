@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/static/logo/daqq-wordmark-reversed.png">
+    <img alt="daqq — Distributed Agreement on Quantum Queries" src="docs/static/logo/daqq-wordmark-ink.png" width="340">
+  </picture>
+</p>
+
 # daqq
 
 **daqq** is a project exploring quantum applications and blockchain integration. It contains a Random Quantum Circuit generator and a Cosmos SDK-based blockchain.
