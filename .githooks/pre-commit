@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+#
+# Pre-commit secret scan. Blocks a commit whose STAGED changes contain secrets,
+# using gitleaks. Documented false positives are exempted in .gitleaksignore.
+#
+# Enable once per clone:  git config core.hooksPath .githooks
+# Emergency bypass:        git commit --no-verify   (avoid; only if you are sure)
+#
+set -euo pipefail
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+	echo "pre-commit: gitleaks is not installed — cannot scan staged changes for secrets." >&2
+	echo "  install:  brew install gitleaks   (or https://github.com/gitleaks/gitleaks)" >&2
+	echo "  bypass:   git commit --no-verify   (only if you are certain there are no secrets)" >&2
+	exit 1
+fi
+
+# Scan only what is staged. --redact hides any matched secret value from output.
+if ! gitleaks git --staged --redact --no-banner; then
+	echo "" >&2
+	echo "pre-commit: gitleaks found potential secret(s) in your staged changes (above)." >&2
+	echo "  fix by one of:" >&2
+	echo "    - remove the secret from the staged change, or" >&2
+	echo "    - if it is a genuine false positive, add its fingerprint to .gitleaksignore, or" >&2
+	echo "    - bypass once (discouraged): git commit --no-verify" >&2
+	exit 1
+fi
+
+exit 0
