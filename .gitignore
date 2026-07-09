@@ -53,6 +53,8 @@ bin/ignite.tar.gz
 !/deploy/worker/
 !/deploy/qiskit/
 !/deploy/README.md
+!/deploy/JOIN.md
+!/deploy/genesis.json
 
 # Scratch / working notes
 /.tmp/

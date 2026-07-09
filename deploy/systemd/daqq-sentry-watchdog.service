@@ -1,0 +1,21 @@
+# Watchdog for the daqq sentry: restarts daqq-seed if its block height stops
+# advancing (the "alive but stuck in consensus mode" stall). Triggered by
+# daqq-sentry-watchdog.timer; see deploy/scripts/sentry-watchdog.sh.
+#
+# Install on the sentry host:
+#   sudo cp deploy/systemd/daqq-sentry-watchdog.{service,timer} /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now daqq-sentry-watchdog.timer
+#
+# Runs as root so it can `systemctl restart daqq-seed` without sudo. Adjust
+# User= and the ExecStart path if the sentry runs elsewhere.
+
+[Unit]
+Description=daqq sentry watchdog (restart if block height is stuck)
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/root/sentry-watchdog.sh
+Environment=RPC_URL=http://127.0.0.1:26637
+Environment=SERVICE=daqq-seed

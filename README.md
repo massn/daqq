@@ -4,6 +4,11 @@
 
 Full documentation lives under [`docs/`](docs/) and is published via Cloudflare Pages — see [docs/README.md](docs/README.md) for build and deploy instructions.
 
+**Want to join the live network?** You can run a full node that syncs
+`quantum-chain` — no stake, no reward, no ports to open on your side. Access is
+**by application**: daqq is a small curated network, so the sentry only admits
+approved source IPs. Request access and connect per [`deploy/JOIN.md`](deploy/JOIN.md).
+
 To run a node 24/7 (Oracle Cloud Always Free + Cloudflare Tunnel) and roll out protocol-version upgrades with no downtime via Cosmovisor, see the deployment runbook in [`deploy/README.md`](deploy/README.md).
 
 ## Protocol

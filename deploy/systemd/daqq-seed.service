@@ -1,0 +1,34 @@
+# daqq public sentry node — the documented entry point approved participants
+# dial to join the network. Non-validating: it holds no validator key and no
+# stake, it just relays blocks and peer addresses. Only its p2p port (26636)
+# faces the public; RPC/gRPC/API stay on localhost.
+#
+# Access is by application: the port is NOT opened to Anywhere. Approved source
+# IPs are admitted per-IP with deploy/scripts/sentry-allowlist.sh (ufw).
+#
+# Install on the host (after running deploy/scripts/init-seed.sh):
+#   sudo cp deploy/systemd/daqq-seed.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now daqq-seed
+#   sudo deploy/scripts/sentry-allowlist.sh add <applicant-IP>   # per approved IP
+#
+# Adjust User= and the paths if the node runs as a non-root user or from a
+# different home. Unlike the validators this runs quantumchaind directly (a seed
+# needs no Cosmovisor hot-swap); upgrade it by swapping the binary and
+# restarting.
+
+[Unit]
+Description=daqq quantum-chain public seed/sentry node
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=root
+ExecStart=/root/go/bin/quantumchaind start --home /root/.quantumchain-seed
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=65535
+Environment=PATH=/usr/local/go/bin:/root/go/bin:/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=multi-user.target
