@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Chain Visualizer</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 2.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+        }
+
+        .status-badge {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* side-by-side: Recent Rounds (left) + Solved Circuit (right) */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            align-items: start;
+            margin-bottom: 2rem;
+        }
+        .two-col > .card { margin-bottom: 0; }
+        @media (max-width: 760px) {
+            .two-col { grid-template-columns: 1fr; }
+        }
+
+        .latest-round {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .latest-seed {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            word-break: break-all;
+            background-color: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            color: #a5b4fc;
+        }
+
+        .seed-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .seed-item {
+            padding: 0.85rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            gap: 1rem;
+            align-items: baseline;
+        }
+
+        .seed-item:last-child {
+            border-bottom: none;
+        }
+
+        .seed-round {
+            flex: 0 0 5.5rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .seed-hash {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            word-break: break-all;
+        }
+
+        .result-item {
+            padding: 0.85rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            gap: 0.75rem;
+            align-items: baseline;
+            flex-wrap: wrap;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-round {
+            flex: 0 0 5.5rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .result-count {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .agree-badge {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.12rem 0.5rem;
+            border-radius: 999px;
+            letter-spacing: 0.03em;
+        }
+
+        .agree-yes {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+
+        .agree-no {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+
+        .agree-single {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+        }
+
+        .result-hash {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            word-break: break-all;
+            flex-basis: 100%;
+        }
+
+        .pager {
+            padding: 0.7rem 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            border-bottom: none;
+        }
+
+        .pager-btn {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--primary);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 8px;
+            padding: 0.2rem 0.7rem;
+            font-size: 0.95rem;
+            cursor: pointer;
+            line-height: 1.5;
+        }
+
+        .pager-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .pager-btn:disabled {
+            opacity: 0.35;
+            cursor: default;
+        }
+
+        .pager-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            min-width: 7rem;
+            text-align: center;
+        }
+
+        .card-note {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin: 0 0 0.75rem;
+        }
+
+        .loading,
+        .empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-muted);
+        }
+
+        #error-msg {
+            color: #ef4444;
+            background-color: rgba(239, 68, 68, 0.1);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+            display: none;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-box {
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* ---- Round progress (commit / reveal / final) ---- */
+        .round-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .round-id {
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .round-offset {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+
+        .phase-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.3rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid currentColor;
+        }
+
+        .phase-badge .dot {
+            width: 0.55rem;
+            height: 0.55rem;
+            border-radius: 50%;
+            background-color: currentColor;
+            box-shadow: 0 0 8px currentColor;
+            animation: phase-pulse 1.5s ease-in-out infinite;
+        }
+
+        .phase-commit {
+            color: #818cf8;
+            background-color: rgba(99, 102, 241, 0.12);
+        }
+
+        .phase-reveal {
+            color: #c084fc;
+            background-color: rgba(168, 85, 247, 0.12);
+        }
+
+        .phase-final {
+            color: #fbbf24;
+            background-color: rgba(245, 158, 11, 0.12);
+        }
+
+        @keyframes phase-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.35; }
+        }
+
+        .round-gauge {
+            position: relative;
+            height: 34px;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: rgba(255, 255, 255, 0.04);
+        }
+
+        .round-zones {
+            position: absolute;
+            inset: 0;
+            display: flex;
+        }
+
+        .round-zones > div {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: rgba(248, 250, 252, 0.55);
+        }
+
+        .zone-commit { background-color: rgba(99, 102, 241, 0.30); }
+        .zone-reveal { background-color: rgba(168, 85, 247, 0.30); }
+        .zone-final  { background-color: rgba(245, 158, 11, 0.30); }
+
+        .round-fill {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            background-color: rgba(255, 255, 255, 0.14);
+            border-right: 2px solid #f8fafc;
+            box-shadow: 0 0 10px rgba(248, 250, 252, 0.6);
+        }
+
+        .round-ticks {
+            position: relative;
+            height: 1.1rem;
+            margin-top: 0.4rem;
+        }
+
+        .round-ticks span {
+            position: absolute;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .round-ticks span:first-child { transform: none; }
+        .round-ticks span:last-child { transform: translateX(-100%); }
+
+        .block-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .block-label {
+            flex: 0 0 auto;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .block-gauge {
+            flex: 1;
+            height: 6px;
+            border-radius: 9999px;
+            background-color: rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+        }
+
+        .block-fill {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, #6366f1, #a855f7);
+        }
+
+        .block-eta {
+            flex: 0 0 auto;
+            min-width: 3rem;
+            text-align: right;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+
+        /* ---- Current problem ---- */
+        .problem-item {
+            padding: 0.5rem 0;
+        }
+
+        .problem-item + .problem-item {
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: 0.5rem;
+        }
+
+        .problem-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text);
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+
+        .problem-id {
+            color: var(--primary);
+            margin-right: 0.4rem;
+        }
+
+        .problem-desc {
+            margin-top: 0.35rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* ---- Footer: protocol name + version ---- */
+        .site-footer {
+            margin-top: 2.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .site-footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .site-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .proto-version {
+            margin-left: 0.45rem;
+            padding: 0.1rem 0.5rem;
+            border-radius: 9999px;
+            background-color: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.75rem;
+            color: #a5b4fc;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Quantum Chain Visualizer</h1>
+            <div id="status" class="status-badge">Connecting...</div>
+        </header>
+
+        <div id="error-msg"></div>
+
+        <section class="card" id="progress-card">
+            <div class="round-head">
+                <div class="round-id">Round <span id="round-num">–</span></div>
+                <div class="phase-badge phase-commit" id="phase-badge">
+                    <span class="dot"></span><span id="phase-text">–</span>
+                </div>
+                <div class="round-offset">block <span id="round-offset">–</span> / 50</div>
+            </div>
+
+            <div class="round-gauge">
+                <div class="round-zones">
+                    <div class="zone-commit" style="flex: 30">commit</div>
+                    <div class="zone-reveal" style="flex: 15">reveal</div>
+                    <div class="zone-final" style="flex: 5">final</div>
+                </div>
+                <div class="round-fill" id="round-fill"></div>
+            </div>
+            <!-- numeric block offsets only; the commit/reveal/final zone bands
+                 above already label each phase, so words here would be redundant
+                 and overlap on narrow screens -->
+            <div class="round-ticks">
+                <span style="left: 0%">0</span>
+                <span style="left: 60%">30</span>
+                <span style="left: 90%">45</span>
+                <span style="left: 100%">50</span>
+            </div>
+
+            <div class="block-row">
+                <span class="block-label">Next block</span>
+                <div class="block-gauge"><div class="block-fill" id="block-fill"></div></div>
+                <span class="block-eta" id="block-eta">–</span>
+            </div>
+        </section>
+
+        <section class="card" id="problem-card">
+            <h2>Current Problem</h2>
+            <div id="problem-loading" class="loading">Loading problem...</div>
+            <div id="problem-content" style="display: none;"></div>
+        </section>
+
+        <section class="card">
+            <h2>Shared Random (Beacon Seed)</h2>
+            <div id="seed-latest-loading" class="loading">Loading shared random...</div>
+            <div id="seed-latest" style="display: none;">
+                <div class="latest-round">Round <span id="seed-latest-round">-</span></div>
+                <div class="latest-seed" id="seed-latest-value"></div>
+            </div>
+        </section>
+
+        <div class="two-col">
+        <section class="card">
+            <h2>Recent Rounds</h2>
+            <p class="card-note">Each finalized round: its shared seed and cross-validation status. ✓ agree means every validator that solved the round's circuit submitted an identical output distribution. Click a round to view its output distribution on the right.</p>
+            <ul id="seed-list" class="seed-list"></ul>
+        </section>
+
+        <section class="card">
+            <h2>Solved Circuit — Output Distribution</h2>
+            <p class="card-note">The actual answer broadcast on-chain (not just its hash): the theoretical probability of every computational-basis state for a solved round's random circuit. Shows the latest round live; click any round in Cross-Validation above to inspect a past round.</p>
+            <div id="solution-loading" class="loading">Loading distribution...</div>
+            <div id="solution-meta" style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.5rem;"></div>
+            <div id="solution-submitters" style="display:none; font-size:0.85rem; color:#cbd5e1; margin:0.2rem 0 0.7rem;"></div>
+            <div id="solution-circuit-label" style="display:none; color:#cbd5e1; font-size:0.85rem; font-weight:600; margin:0.4rem 0 0.25rem;">Quantum circuit (5 qubits × 10 layers, generated from the round's seed)</div>
+            <div id="solution-circuit" style="display:none; overflow-x:auto; margin-bottom:0.4rem;"></div>
+            <a id="solution-qasm-toggle" href="javascript:void(0)" style="display:none; color:#6366f1; font-size:0.82rem;">⟨q⟩ show OpenQASM</a>
+            <pre id="solution-qasm" style="display:none; max-height:240px; overflow:auto; background:#0b1220; border:1px solid #1e293b; border-radius:8px; padding:0.6rem; font-size:0.78rem; color:#cbd5e1; white-space:pre; margin:0.4rem 0 1rem;"></pre>
+            <div id="solution-chart-label" style="display:none; color:#cbd5e1; font-size:0.85rem; font-weight:600; margin:0.4rem 0 0.25rem;">Output distribution (probability per basis state)</div>
+            <div id="solution-chart" style="display:none; align-items:flex-end; gap:2px; height:180px; overflow-x:auto; padding-top:8px;"></div>
+            <a id="solution-raw-toggle" href="javascript:void(0)" style="display:none; color:#6366f1; font-size:0.82rem; margin-top:0.6rem; display:none;">⟨/⟩ show raw JSON</a>
+            <pre id="solution-raw" style="display:none; max-height:280px; overflow:auto; background:#0b1220; border:1px solid #1e293b; border-radius:8px; padding:0.6rem; font-size:0.74rem; color:#cbd5e1; white-space:pre; margin-top:0.4rem;"></pre>
+        </section>
+        </div>
+
+        <section class="card">
+            <h2>Node Network</h2>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="stat-value" id="net-nodes">-</span>
+                    <span class="stat-label">Nodes</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-value" id="net-peers">-</span>
+                    <span class="stat-label">Connected Peers</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-value" id="net-height">-</span>
+                    <span class="stat-label">Block Height</span>
+                </div>
+            </div>
+
+            <div id="net-loading" class="loading">Loading network...</div>
+        </section>
+
+        <footer class="site-footer">
+            Protocol:
+            <a href="https://daqq.pages.dev/docs/problem-system/" target="_blank" rel="noopener noreferrer">daqq Problem System</a>
+            <span class="proto-version">v1</span>
+        </footer>
+    </div>
+
+    <script>
+        // Served by the node's own API server, so everything is same-origin.
+        const SEED_URL = 'https://daqq-data.massn.workers.dev/gui/seeds';
+        const NET_URL = 'https://daqq-data.massn.workers.dev/gui/net_info';
+        const PROBLEM_URL = 'https://daqq-data.massn.workers.dev/gui/problems';
+
+        // Append a timestamp so periodic polls always fetch fresh data — on the
+        // static Pages build this defeats browser/CDN caching of the snapshot files.
+        const bust = (u) => u + (u.indexOf('?') < 0 ? '?' : '&') + '_=' + Date.now();
+
+        function showError(msg) {
+            const el = document.getElementById('error-msg');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        function setStatus(text, color) {
+            const el = document.getElementById('status');
+            el.textContent = text;
+            el.style.color = color;
+        }
+
+        // ---- Shared random (beacon seeds) ----
+
+        async function fetchSeeds() {
+            const res = await fetch(bust(SEED_URL));
+            if (!res.ok) throw new Error('seed request failed');
+            const data = await res.json();
+            return data.seeds || [];
+        }
+
+        // Lists can grow to hundreds of rounds; paginate (newest first) and let
+        // the user page through history with ◀ / ▶.
+        const PAGE_SIZE = 10;
+        let seedsPage = 0, lastSeeds = [];
+
+        function makePager(page, total, onPage) {
+            const totalPages = Math.ceil(total / PAGE_SIZE);
+            const li = document.createElement('li');
+            li.className = 'pager';
+            const prev = document.createElement('button');
+            prev.type = 'button';
+            prev.className = 'pager-btn';
+            prev.textContent = '◀';
+            prev.disabled = page <= 0;
+            prev.addEventListener('click', () => onPage(page - 1));
+            const label = document.createElement('span');
+            label.className = 'pager-label';
+            label.textContent = (page * PAGE_SIZE + 1) + '–' + Math.min(total, (page + 1) * PAGE_SIZE) + ' / ' + total;
+            const next = document.createElement('button');
+            next.type = 'button';
+            next.className = 'pager-btn';
+            next.textContent = '▶';
+            next.disabled = page >= totalPages - 1;
+            next.addEventListener('click', () => onPage(page + 1));
+            li.appendChild(prev);
+            li.appendChild(label);
+            li.appendChild(next);
+            return li;
+        }
+
+        function renderSeeds(seeds) {
+            const latestLoading = document.getElementById('seed-latest-loading');
+            const latest = document.getElementById('seed-latest');
+            const list = document.getElementById('seed-list');
+
+            if (seeds.length === 0) {
+                latestLoading.textContent =
+                    'No shared random yet. The beacon finalizes a seed every 50 blocks once participants commit and reveal.';
+                latest.style.display = 'none';
+                list.innerHTML = '';
+                return;
+            }
+
+            // seeds arrive newest-first from the node
+            const newest = seeds[0];
+            document.getElementById('seed-latest-round').textContent = newest.round_id;
+            document.getElementById('seed-latest-value').textContent = newest.seed;
+            latestLoading.style.display = 'none';
+            latest.style.display = 'block';
+
+            lastSeeds = seeds;
+            const totalPagesS = Math.ceil(seeds.length / PAGE_SIZE);
+            if (seedsPage > totalPagesS - 1) seedsPage = Math.max(0, totalPagesS - 1);
+            list.innerHTML = '';
+            const startS = seedsPage * PAGE_SIZE;
+            const shownSeeds = seeds.slice(startS, startS + PAGE_SIZE);
+            shownSeeds.forEach(s => {
+                const li = document.createElement('li');
+                li.className = 'seed-item';
+                const round = document.createElement('span');
+                round.className = 'seed-round';
+                round.textContent = 'Round ' + s.round_id;
+
+                // cross-validation status for this round (merged in from results)
+                const r = lastResults.find(x => x.round_id === s.round_id);
+                const n = r ? (r.submissions || []).length : 0;
+                const badge = document.createElement('span');
+                let cls, txt;
+                if (n === 0) { cls = 'agree-single'; txt = 'no result'; }
+                else if (n < 2) { cls = 'agree-single'; txt = 'single'; }
+                else if (r.agreement) { cls = 'agree-yes'; txt = '✓ agree · ' + n; }
+                else { cls = 'agree-no'; txt = '✗ differ · ' + n; }
+                badge.className = 'agree-badge ' + cls;
+                badge.textContent = txt;
+
+                const hash = document.createElement('span');
+                hash.className = 'seed-hash';
+                hash.textContent = s.seed.slice(0, 20) + '…';
+
+                if (n > 0) {
+                    li.style.cursor = 'pointer';
+                    li.title = "Click to view this round's output distribution";
+                    li.addEventListener('click', () => showSolutionForRound(s.round_id));
+                }
+                li.appendChild(round);
+                li.appendChild(badge);
+                li.appendChild(hash);
+                list.appendChild(li);
+            });
+            if (seeds.length > PAGE_SIZE) {
+                list.appendChild(makePager(seedsPage, seeds.length,
+                    (p) => { seedsPage = p; renderSeeds(lastSeeds); }));
+            }
+        }
+
+        async function refreshSeeds() {
+            try {
+                const seeds = await fetchSeeds();
+                renderSeeds(seeds);
+                setStatus('Connected', '#10b981');
+            } catch (err) {
+                setStatus('Error', '#ef4444');
+                showError(err.message + '. Make sure the node is running with the REST API enabled.');
+                document.getElementById('seed-latest-loading').textContent = 'Failed to load';
+            }
+        }
+
+        // ---- Cross-validation results ----
+
+        const RESULTS_URL = 'https://daqq-data.massn.workers.dev/gui/results';
+
+        async function fetchResults() {
+            const res = await fetch(bust(RESULTS_URL));
+            if (!res.ok) throw new Error('results request failed');
+            const data = await res.json();
+            return data.results || [];
+        }
+
+        let lastResults = [];
+
+        // Results are no longer a separate list — they are merged into Recent
+        // Rounds as a per-round cross-validation badge. We just keep the data and
+        // re-render the rounds list so the badges appear.
+        async function refreshResults() {
+            try {
+                lastResults = await fetchResults();
+                renderSeeds(lastSeeds);
+            } catch (err) {
+                /* the rounds list / status indicator already surface errors */
+            }
+        }
+
+        // ---- Current problem (what the network is solving) ----
+
+        async function fetchProblems() {
+            const res = await fetch(bust(PROBLEM_URL));
+            if (!res.ok) throw new Error('problem request failed');
+            const data = await res.json();
+            return data.problems || [];
+        }
+
+        function renderProblems(problems) {
+            const loading = document.getElementById('problem-loading');
+            const content = document.getElementById('problem-content');
+            const active = problems.filter(p => p.enabled);
+
+            if (active.length === 0) {
+                loading.textContent =
+                    'No active problem. No problem is currently open for submissions.';
+                loading.style.display = 'block';
+                content.style.display = 'none';
+                return;
+            }
+
+            content.innerHTML = '';
+            active.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'problem-item';
+                const name = document.createElement('div');
+                name.className = 'problem-name';
+                const id = document.createElement('span');
+                id.className = 'problem-id';
+                id.textContent = '#' + p.id;
+                name.appendChild(id);
+                name.appendChild(document.createTextNode(p.name));
+                item.appendChild(name);
+                if (p.description) {
+                    const desc = document.createElement('div');
+                    desc.className = 'problem-desc';
+                    desc.textContent = p.description;
+                    item.appendChild(desc);
+                }
+                content.appendChild(item);
+            });
+            loading.style.display = 'none';
+            content.style.display = 'block';
+        }
+
+        async function refreshProblems() {
+            try {
+                renderProblems(await fetchProblems());
+            } catch (err) {
+                document.getElementById('problem-loading').textContent = 'Failed to load problem.';
+            }
+        }
+
+        // ---- Node network (peers) ----
+
+        async function fetchNetwork() {
+            const res = await fetch(bust(NET_URL));
+            if (!res.ok) throw new Error('network request failed');
+            const data = await res.json();
+            const peers = data.peers || [];
+            return {
+                self: data.self || {},
+                peers,
+                nPeers: typeof data.n_peers === 'number' ? data.n_peers : peers.length
+            };
+        }
+
+        function renderNetwork({ self, peers, nPeers }) {
+            document.getElementById('net-nodes').textContent = peers.length + 1;
+            document.getElementById('net-peers').textContent = nPeers;
+            document.getElementById('net-height').textContent = self.height || '-';
+            document.getElementById('net-loading').style.display = 'none';
+        }
+
+        async function refreshNetwork() {
+            try {
+                renderNetwork(await fetchNetwork());
+            } catch (err) {
+                document.getElementById('net-loading').textContent = 'Failed to load network info.';
+            }
+        }
+
+        // ---- Round progress (commit / reveal / final) ----
+        // The beacon runs a fixed 50-block cycle (see x/beacon/keeper/abci.go):
+        //   offset 0-30  commit   |  30-45  reveal  |  45-50  finalize
+        // We derive everything from the latest block height reported by
+        // /gui/net_info, and interpolate within a block using a measured
+        // block time so the bar advances smoothly between heights.
+        const ROUND_BLOCKS = 50;
+        const COMMIT_END = 30;
+        const REVEAL_END = 45;
+
+        // When the data source is an absolute URL we are reading a periodic
+        // snapshot (the daqq-data Worker, refreshed ~every 2 min) rather than the
+        // live node's same-origin /gui. In that "relay" mode the height only moves
+        // every couple of minutes, so we extrapolate the bar forward from the last
+        // observed height using the measured block time and re-sync on each push.
+        // Served straight from the node (relative 'https://daqq-data.massn.workers.dev/gui/...') it stays real-time.
+        const RELAY = SEED_URL.includes('://');
+        const MAX_EXTRAPOLATE_BLOCKS = 30;   // ~3 min cap so a stalled feed freezes rather than runs away
+
+        let lastHeight = null;      // latest height we've observed
+        let lastHeightTime = 0;     // wall-clock ms when we first saw it
+        let blockTimeMs = 6000;     // EMA estimate of ms-per-block (chain pacing ~6s)
+        let blockTimeSeen = false;  // have we measured a real interval yet?
+
+        function phaseFor(offset) {
+            if (offset < COMMIT_END) return { key: 'commit', label: 'Commit' };
+            if (offset < REVEAL_END) return { key: 'reveal', label: 'Reveal' };
+            return { key: 'final', label: 'Finalize' };
+        }
+
+        async function pollHeight() {
+            try {
+                const res = await fetch(bust(NET_URL));
+                if (!res.ok) return;
+                const data = await res.json();
+                const h = parseInt((data.self || {}).height, 10);
+                if (!Number.isFinite(h)) return;
+
+                const now = Date.now();
+                if (lastHeight === null) {
+                    lastHeight = h;
+                    lastHeightTime = now;
+                } else if (h > lastHeight) {
+                    // Live node only: measure real per-block time from consecutive
+                    // heights. In relay mode the snapshot jumps ~20 blocks at once
+                    // over a 1s poll gap, which would mis-measure as ~50ms/block —
+                    // so there we keep the fixed chain pacing (blockTimeMs default).
+                    if (!RELAY) {
+                        const perBlock = (now - lastHeightTime) / (h - lastHeight);
+                        if (perBlock > 250 && perBlock < 120000) {
+                            blockTimeMs = blockTimeSeen ? blockTimeMs * 0.6 + perBlock * 0.4 : perBlock;
+                            blockTimeSeen = true;
+                        }
+                    }
+                    lastHeight = h;
+                    lastHeightTime = now;
+                }
+            } catch (err) {
+                /* network graph handler already surfaces connection errors */
+            }
+        }
+
+        function renderProgress() {
+            if (lastHeight === null) return;
+
+            let roundNum, offsetInt, frac;
+            if (RELAY) {
+                // Snapshot feed: extrapolate height from the last observed value so
+                // the bar keeps advancing ~1 block / blockTimeMs between pushes,
+                // then re-syncs when pollHeight sees a fresh snapshot. Capped so a
+                // stalled feed (node down) freezes instead of drifting forever.
+                const blocks = Math.min(MAX_EXTRAPOLATE_BLOCKS,
+                    (Date.now() - lastHeightTime) / blockTimeMs);
+                const eff = lastHeight + blocks;
+                const efloor = Math.floor(eff);
+                offsetInt = efloor % ROUND_BLOCKS;
+                roundNum = Math.floor(efloor / ROUND_BLOCKS);
+                frac = eff - efloor;
+            } else {
+                // Live node: authoritative height every second; only interpolate
+                // the fraction of the way from lastHeight to the next block.
+                frac = Math.min(1, (Date.now() - lastHeightTime) / blockTimeMs);
+                offsetInt = lastHeight % ROUND_BLOCKS;
+                roundNum = Math.floor(lastHeight / ROUND_BLOCKS);
+            }
+            const roundPos = offsetInt + frac;       // 0 .. 50
+            const phase = phaseFor(offsetInt);
+
+            document.getElementById('round-num').textContent = roundNum;
+            document.getElementById('round-offset').textContent = offsetInt;
+            document.getElementById('round-fill').style.width =
+                (roundPos / ROUND_BLOCKS * 100) + '%';
+
+            const badge = document.getElementById('phase-badge');
+            badge.className = 'phase-badge phase-' + phase.key;
+            document.getElementById('phase-text').textContent = phase.label;
+
+            document.getElementById('block-fill').style.width = (frac * 100) + '%';
+            const etaSec = Math.max(0, (blockTimeMs * (1 - frac)) / 1000);
+            document.getElementById('block-eta').textContent = '~' + etaSec.toFixed(1) + 's';
+        }
+
+        // ---- Solved circuit output distribution (the actual on-chain answer) ----
+
+        // Regenerate a round's quantum circuit from its seed, client-side. This
+        // mirrors circuit.MakeRandomQC + the XorShift32 PRNG exactly (verified to
+        // match the Go implementation byte-for-byte), so the diagram shown is the
+        // actual circuit each validator solved — no backend data needed.
+        function makeCircuit(seedHex, width, depth) {
+            // FNV-1a over the full seed → 32-bit PRNG state (mirrors circuit.SeedState in Go)
+            let state = 2166136261 >>> 0;
+            for (let i = 0; i + 1 < seedHex.length; i += 2) {
+                state = (state ^ parseInt(seedHex.substr(i, 2), 16)) >>> 0;
+                state = Math.imul(state, 16777619) >>> 0;
+            }
+            const GS = ['H', 'S', 'T'];
+            const next = () => {
+                state = (state ^ (state << 13)) >>> 0;
+                state = (state ^ (state >>> 17)) >>> 0;
+                state = (state ^ (state << 5)) >>> 0;
+                return GS[state % 3];
+            };
+            const layers = [];
+            for (let i = 0; i < depth; i++) {
+                const m = i % 4;
+                if (m === 0 || m === 2) {
+                    const singles = [];
+                    for (let q = 0; q < width; q++) singles.push({ q: q, g: next() });
+                    layers.push({ type: 'single', singles: singles });
+                } else if (m === 1) {                       // even CNOT pairs (0-1, 2-3, …)
+                    const cnots = [];
+                    for (let j = 0; j < Math.floor(width / 2); j++) cnots.push({ c: 2 * j, t: 2 * j + 1 });
+                    layers.push({ type: 'cnot', cnots: cnots });
+                } else {                                     // odd CNOT pairs (1-2, 3-4, …)
+                    const cnots = [];
+                    for (let j = 0; 2 * j + 2 < width; j++) cnots.push({ c: 2 * j + 1, t: 2 * j + 2 });
+                    layers.push({ type: 'cnot', cnots: cnots });
+                }
+            }
+            return { width: width, depth: depth, layers: layers };
+        }
+
+        function circuitSVG(circ) {
+            const W = circ.width, D = circ.layers.length;
+            const colW = 46, rowH = 38, padL = 30, padT = 14;
+            const w = padL + D * colW + 12, h = padT + W * rowH;
+            const yOf = q => padT + q * rowH + rowH / 2;
+            let s = '<svg viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" xmlns="http://www.w3.org/2000/svg">';
+            for (let q = 0; q < W; q++) {
+                const y = yOf(q);
+                s += '<line x1="' + padL + '" y1="' + y + '" x2="' + (w - 6) + '" y2="' + y + '" stroke="#334155" stroke-width="1.5"/>';
+                s += '<text x="4" y="' + (y + 4) + '" fill="#94a3b8" font-size="12" font-family="monospace">q' + q + '</text>';
+            }
+            circ.layers.forEach((L, i) => {
+                const x = padL + colW / 2 + i * colW;
+                if (L.type === 'single') {
+                    L.singles.forEach(g => {
+                        const y = yOf(g.q);
+                        s += '<rect x="' + (x - 12) + '" y="' + (y - 12) + '" width="24" height="24" rx="5" fill="#1e293b" stroke="#6366f1" stroke-width="1.5"/>';
+                        s += '<text x="' + x + '" y="' + (y + 4) + '" fill="#e0e7ff" font-size="12" font-weight="700" text-anchor="middle" font-family="monospace">' + g.g + '</text>';
+                    });
+                } else {
+                    L.cnots.forEach(c => {
+                        const yc = yOf(c.c), yt = yOf(c.t);
+                        s += '<line x1="' + x + '" y1="' + yc + '" x2="' + x + '" y2="' + yt + '" stroke="#a855f7" stroke-width="2"/>';
+                        s += '<circle cx="' + x + '" cy="' + yc + '" r="4.5" fill="#a855f7"/>';
+                        s += '<circle cx="' + x + '" cy="' + yt + '" r="9" fill="#0f172a" stroke="#a855f7" stroke-width="2"/>';
+                        s += '<line x1="' + (x - 9) + '" y1="' + yt + '" x2="' + (x + 9) + '" y2="' + yt + '" stroke="#a855f7" stroke-width="2"/>';
+                        s += '<line x1="' + x + '" y1="' + (yt - 9) + '" x2="' + x + '" y2="' + (yt + 9) + '" stroke="#a855f7" stroke-width="2"/>';
+                    });
+                }
+            });
+            return s + '</svg>';
+        }
+
+        // OpenQASM 2.0 for the circuit — copy/paste into Qiskit etc. to solve the
+        // round's problem yourself (gates: H/S/T single-qubit + CNOT).
+        function circuitQASM(circ) {
+            const g1 = { H: 'h', S: 's', T: 't' };
+            const lines = ['OPENQASM 2.0;', 'include "qelib1.inc";',
+                'qreg q[' + circ.width + '];', 'creg c[' + circ.width + '];'];
+            circ.layers.forEach(L => {
+                if (L.type === 'single') L.singles.forEach(s => lines.push((g1[s.g] || s.g.toLowerCase()) + ' q[' + s.q + '];'));
+                else L.cnots.forEach(c => lines.push('cx q[' + c.c + '],q[' + c.t + '];'));
+            });
+            lines.push('measure q -> c;');
+            return lines.join('\n');
+        }
+
+        const SOLUTIONS_URL = 'https://daqq-data.massn.workers.dev/gui/solutions';
+        const SUBMISSIONS_URL = 'https://daqq-data.massn.workers.dev/gui/submissions';
+        const MONIKERS_URL = 'https://daqq-data.massn.workers.dev/gui/monikers';
+        let solutionsMap = {};        // { round_id: [ {state, probability}, … ] } (agreed/first)
+        let submissionsMap = {};      // { round_id: { address: [entries] } } (per node)
+        let monikersMap = {};         // { bech32-data-part: self-declared moniker }
+        let selectedRound = null;     // null = show the latest cached round
+        let selectedNode = null;      // address of the node whose histogram to show; null = agreed
+
+        async function fetchSolutions() {
+            const res = await fetch(bust(SOLUTIONS_URL));
+            if (!res.ok) throw new Error('solutions request failed');
+            return res.json();
+        }
+
+        // A submitter's account address (qc1…) shares its 32-char bech32 data part
+        // with the validator operator address (qcvaloper1…), so we name nodes by
+        // their self-declared validator moniker.
+        function nodeName(addr) {
+            const m = monikersMap[(addr || '').slice(3, 35)];
+            return m || ((addr || '').slice(0, 12) + '…');
+        }
+
+        function fmtTime(t) {
+            if (!t) return '?';
+            const d = new Date(t);
+            return isNaN(d.getTime()) ? t : d.toLocaleString();
+        }
+
+        function renderSubmitters(rid, highlightAddr) {
+            const el = document.getElementById('solution-submitters');
+            const perNode = submissionsMap[rid] || {};
+            const addrs = Object.keys(perNode);
+            if (!addrs.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+            el.innerHTML = '';
+            const head = document.createElement('div');
+            head.style.cssText = 'color:#94a3b8; margin-bottom:0.25rem;';
+            head.textContent = 'Submitted by ' + addrs.length + ' node' + (addrs.length === 1 ? '' : 's')
+                + ' (earliest first) — click to view its histogram:';
+            el.appendChild(head);
+            addrs.sort((a, b) => ((perNode[a] || {}).height || 0) - ((perNode[b] || {}).height || 0)).forEach(addr => {
+                const rec = perNode[addr] || {};
+                const sel = (highlightAddr === addr);
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex; gap:0.5rem; align-items:baseline; padding:2px 6px; border-radius:6px; cursor:pointer; flex-wrap:wrap;'
+                    + (sel ? 'background:rgba(168,85,247,0.18); outline:1px solid #a855f7;' : '');
+                row.title = "Show this node's submitted distribution";
+                row.addEventListener('click', () => selectNode(addr));
+                row.innerHTML = '<span style="color:#a855f7;">●</span>'
+                    + '<span style="font-weight:600;">' + nodeName(addr) + '</span>'
+                    + '<span style="color:#64748b; font-family:monospace; font-size:0.8rem;">' + addr.slice(0, 14) + '…</span>'
+                    + '<span style="color:#94a3b8; margin-left:auto;">' + fmtTime(rec.time)
+                    + (rec.height != null ? ' · block ' + rec.height : '') + '</span>';
+                el.appendChild(row);
+            });
+            el.style.display = 'block';
+        }
+
+        function selectNode(addr) {
+            selectedNode = (selectedNode === addr) ? null : addr;  // click again → back to agreed
+            renderSolution();
+        }
+
+        function latestSolutionRound() {
+            const ks = Object.keys(solutionsMap).map(Number).filter(n => !isNaN(n));
+            return ks.length ? Math.max(...ks) : null;
+        }
+
+        function renderSolution() {
+            const loading = document.getElementById('solution-loading');
+            const chart = document.getElementById('solution-chart');
+            const meta = document.getElementById('solution-meta');
+            let rid = (selectedRound != null && solutionsMap[selectedRound]) ? selectedRound : latestSolutionRound();
+            const perNode = (rid != null) ? submissionsMap[rid] : null;
+            const entriesOf = (rec) => Array.isArray(rec) ? rec : ((rec && rec.entries) || []);
+            // default selection = the node that COMMITTED FIRST (earliest block)
+            let firstNode = null;
+            if (perNode) {
+                firstNode = Object.keys(perNode).sort((a, b) =>
+                    ((perNode[a] || {}).height || 0) - ((perNode[b] || {}).height || 0))[0] || null;
+            }
+            const shownNode = (selectedNode && perNode && perNode[selectedNode]) ? selectedNode : firstNode;
+            let entries;
+            if (shownNode && perNode) entries = entriesOf(perNode[shownNode]);
+            else if (rid != null && solutionsMap[rid]) entries = solutionsMap[rid];
+            else entries = [];
+            const circuitEl = document.getElementById('solution-circuit');
+            const circuitLabel = document.getElementById('solution-circuit-label');
+            const chartLabel = document.getElementById('solution-chart-label');
+            if (!entries.length) {
+                loading.textContent = 'Waiting for a solved round...';
+                loading.style.display = 'block';
+                chart.style.display = 'none';
+                circuitEl.style.display = 'none';
+                circuitLabel.style.display = 'none';
+                chartLabel.style.display = 'none';
+                document.getElementById('solution-submitters').style.display = 'none';
+                document.getElementById('solution-raw-toggle').style.display = 'none';
+                document.getElementById('solution-raw').style.display = 'none';
+                document.getElementById('solution-qasm-toggle').style.display = 'none';
+                document.getElementById('solution-qasm').style.display = 'none';
+                meta.textContent = '';
+                return;
+            }
+
+            // circuit diagram, regenerated from this round's shared seed
+            const seedRow = lastSeeds.find(s => s.round_id === rid);
+            const qasmToggle = document.getElementById('solution-qasm-toggle');
+            const qasmPre = document.getElementById('solution-qasm');
+            if (seedRow && seedRow.seed) {
+                const circ = makeCircuit(seedRow.seed, 5, 10);
+                circuitEl.innerHTML = circuitSVG(circ);
+                circuitEl.style.display = 'block';
+                circuitLabel.style.display = 'block';
+                qasmToggle.style.display = 'inline-block';
+                if (qasmPre.style.display === 'block') qasmPre.textContent = circuitQASM(circ);
+            } else {
+                circuitEl.style.display = 'none';
+                circuitLabel.style.display = 'none';
+                qasmToggle.style.display = 'none';
+                qasmPre.style.display = 'none';
+            }
+            chartLabel.textContent = shownNode
+                ? ('Output distribution submitted by ' + nodeName(shownNode) + ' (click its row again for the agreed view)')
+                : 'Output distribution (probability per basis state)';
+            chartLabel.style.display = 'block';
+            const sorted = entries.slice().sort((a, b) => (a.state < b.state ? -1 : 1));
+            const probs = sorted.map(e => parseFloat(e.probability) || 0);
+            const maxP = Math.max(...probs, 1e-9);
+            chart.innerHTML = '';
+            sorted.forEach((e, i) => {
+                const col = document.createElement('div');
+                col.style.cssText = 'display:flex; flex-direction:column; align-items:center; justify-content:flex-end; min-width:20px;';
+                const bar = document.createElement('div');
+                bar.style.cssText = 'width:13px; border-radius:3px 3px 0 0; background:linear-gradient(#6366f1,#a855f7); height:' + (probs[i] / maxP * 140) + 'px;';
+                bar.title = e.state + ' = ' + e.probability;
+                const lab = document.createElement('div');
+                lab.style.cssText = 'font-size:9px; color:#64748b; margin-top:3px; font-family:monospace;';
+                lab.textContent = e.state;
+                col.appendChild(bar); col.appendChild(lab);
+                chart.appendChild(col);
+            });
+            const isPast = (selectedRound != null && rid === selectedRound && rid !== latestSolutionRound());
+            let info = (isPast ? '▶ ' : '') + 'Round ' + rid + ' · ' + sorted.length + ' states';
+            const r = lastResults.find(x => x.round_id === rid);
+            if (r) {
+                const n = (r.submissions || []).length;
+                const h = (((r.submissions || [])[0] || {}).distribution_hash || '').slice(0, 12);
+                info += ' · ' + (r.agreement ? '✓ agreed' : '✗ mismatch') + ' by ' + n + ' validator' + (n === 1 ? '' : 's') + (h ? ' · hash ' + h + '…' : '');
+            }
+            renderSubmitters(rid, shownNode);
+            info += isPast ? '  — click a round above, or "latest" to follow live.' : '  — click a round above to inspect a past round.';
+            meta.textContent = info;
+            loading.style.display = 'none';
+            chart.style.display = 'flex';
+            const rawT = document.getElementById('solution-raw-toggle');
+            rawT.style.display = 'inline';
+            const rawPre = document.getElementById('solution-raw');
+            if (rawPre.style.display === 'block') rawPre.textContent = JSON.stringify(currentRawJSON(), null, 2);
+        }
+
+        function showSolutionForRound(rid) {
+            if (solutionsMap[rid]) {
+                selectedRound = (selectedRound === rid) ? null : rid;  // click again to unpin → latest
+                selectedNode = null;                                   // new round → back to agreed view
+                renderSolution();
+                document.getElementById('solution-chart').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                document.getElementById('solution-meta').textContent =
+                    'Round ' + rid + ': distribution not cached (only the latest ~30 rounds are kept).';
+            }
+        }
+
+        function currentRawJSON() {
+            const rid = (selectedRound != null && solutionsMap[selectedRound]) ? selectedRound : latestSolutionRound();
+            if (rid == null) return {};
+            const r = lastResults.find(x => x.round_id === rid);
+            const seedRow = lastSeeds.find(s => s.round_id === rid);
+            return {
+                round_id: rid,
+                seed: seedRow ? seedRow.seed : null,
+                agreement: r ? r.agreement : null,
+                submissions: r ? r.submissions : [],
+                distributions: submissionsMap[rid] || { agreed: solutionsMap[rid] || [] }
+            };
+        }
+
+        function toggleSolutionRaw() {
+            const pre = document.getElementById('solution-raw');
+            const link = document.getElementById('solution-raw-toggle');
+            if (pre.style.display !== 'block') {
+                pre.textContent = JSON.stringify(currentRawJSON(), null, 2);
+                pre.style.display = 'block';
+                link.textContent = '⟨/⟩ hide raw JSON';
+            } else {
+                pre.style.display = 'none';
+                link.textContent = '⟨/⟩ show raw JSON';
+            }
+        }
+
+        function currentDisplayedRound() {
+            return (selectedRound != null && solutionsMap[selectedRound]) ? selectedRound : latestSolutionRound();
+        }
+
+        function toggleSolutionQASM() {
+            const pre = document.getElementById('solution-qasm');
+            const link = document.getElementById('solution-qasm-toggle');
+            if (pre.style.display !== 'block') {
+                const rid = currentDisplayedRound();
+                const seedRow = rid != null ? lastSeeds.find(s => s.round_id === rid) : null;
+                pre.textContent = (seedRow && seedRow.seed)
+                    ? circuitQASM(makeCircuit(seedRow.seed, 5, 10))
+                    : '(no circuit for this round)';
+                pre.style.display = 'block';
+                link.textContent = '⟨q⟩ hide OpenQASM';
+            } else {
+                pre.style.display = 'none';
+                link.textContent = '⟨q⟩ show OpenQASM';
+            }
+        }
+
+        async function refreshSolution() {
+            try {
+                const j = (u) => fetch(bust(u)).then(r => r.ok ? r.json() : {}).catch(() => ({}));
+                const [sols, subm, mons] = await Promise.all([
+                    fetchSolutions(), j(SUBMISSIONS_URL), j(MONIKERS_URL)
+                ]);
+                solutionsMap = sols || {};
+                submissionsMap = subm || {};
+                monikersMap = mons || {};
+                renderSolution();
+            } catch (err) { document.getElementById('solution-loading').textContent = 'Failed to load distribution.'; }
+        }
+
+        async function refresh() {
+            await refreshSeeds();
+            refreshResults();
+            refreshProblems();
+            refreshNetwork();
+            refreshSolution();
+        }
+
+        document.getElementById('solution-raw-toggle').addEventListener('click', toggleSolutionRaw);
+        document.getElementById('solution-qasm-toggle').addEventListener('click', toggleSolutionQASM);
+
+        refresh();
+        setInterval(refresh, 10000);
+
+        pollHeight();
+        setInterval(pollHeight, 1000);   // track block height
+
+        // Animate the bar every frame. Driving the width directly (with no CSS
+        // transition) keeps it exactly in sync: on a new block the fill snaps
+        // cleanly back to the left edge instead of being caught mid-transition.
+        function animate() {
+            renderProgress();
+            requestAnimationFrame(animate);
+        }
+        requestAnimationFrame(animate);
+    </script>
+</body>
+
+</html>
