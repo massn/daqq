@@ -95,7 +95,12 @@ cp deploy/genesis.json "$HOME/.quantumchain/config/genesis.json"
 CFG="$HOME/.quantumchain/config/config.toml"
 sed -i.bak 's#^persistent_peers = .*#persistent_peers = "fe59695b49bbd872f60a0a32be1067c1db0861cf@133.88.118.11:26636"#' "$CFG"
 
-# 5. sync
+# 5. set the gas price (daqq is a no-reward ledger; the node refuses to start
+#    with the empty default). Zero matches the network.
+APP="$HOME/.quantumchain/config/app.toml"
+sed -i.bak 's#^minimum-gas-prices = .*#minimum-gas-prices = "0stake"#' "$APP"
+
+# 6. sync
 quantumchaind start --home "$HOME/.quantumchain"
 ```
 
