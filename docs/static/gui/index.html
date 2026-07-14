@@ -36,15 +36,34 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .brand-logo {
+            height: 64px;
+            width: auto;
+            display: block;
         }
 
         h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
+            font-size: 1.5rem;
+            font-weight: 600;
             background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin: 0;
+        }
+
+        @media (max-width: 560px) {
+            .brand-logo { height: 48px; }
+            h1 { font-size: 1.15rem; }
         }
 
         .status-badge {
@@ -495,7 +514,10 @@
 <body>
     <div class="container">
         <header>
-            <h1>Quantum Chain Visualizer</h1>
+            <div class="brand">
+                <img class="brand-logo" src="/logo/daqq-wordmark-reversed.png" alt="daqq" width="1049" height="380">
+                <h1>Quantum Chain Visualizer</h1>
+            </div>
             <div id="status" class="status-badge">Connecting...</div>
         </header>
 
