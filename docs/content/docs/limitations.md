@@ -133,10 +133,37 @@ There are currently **no High-severity issues** in the shipped code. Everything 
 - Pick one representation (raw bytes recommended) and convert at the SDK boundary, not inside the keeper.
 - Add a test that pins `commit = sha256_hex(secret_hex)` so the convention is locked.
 
+## 8. Validator onboarding & the stake supply
+
+**Issue.** New validators need bonded `stake` to join consensus, but genesis allocates the entire initial stake to a small fixed set of accounts (alice / bob / carol). There is no built-in path that automatically hands stake to a newcomer, so "how does the Nth validator get stake?" is an open governance question rather than a solved mechanism.
+
+Compounding this, the chain currently runs the **default Cosmos SDK `mint` module with inflation left on** (~13%/yr, minting on the order of tens of millions of `stake` per year, of which 2% flows to the community pool via `community_tax`). This means two things that are easy to get wrong:
+
+- **Stake is not fixed** — the supply grows every block. So the naive worry "we will run out of stake to hand out" is not literally true today.
+- **But new stake does not reach newcomers.** By default, minted inflation accrues to *already-bonded* validators/delegators in proportion to their existing stake. Left alone, this concentrates stake in the genesis accounts (rich-get-richer) rather than funding new validators.
+
+There is also a **design inconsistency to flag**: daqq is described as a *no-reward* chain, yet live inflation is paying real staking rewards. "No reward" here should be read as "**`stake` has no market value / is not a tradeable asset**", not as "no minting happens". The code and the framing have not been reconciled.
+
+**How big is it today?**
+
+- Severity: **Medium** — not a code bug and no impact on ledger integrity or seed unpredictability, but it blocks the "anyone can become a validator" direction and leaves the economic model under-specified.
+- At current scale (2 bonded validators) it is invisible; it becomes real the moment someone wants to onboard an independent validator.
+
+**When it would matter.**
+
+- Any move toward permissionless or semi-open validation (see also Issue #3 — an open validator set makes RANDAO withholding cheaper).
+- Long-term decentralisation: without an onboarding path, the validator set stays pinned to the genesis accounts.
+
+**Mitigations / directions.**
+
+- **Fund newcomers from the community pool via governance.** `MsgCommunityPoolSpend` can grant bonded stake to a new validator through a normal proposal → vote → payout. This is the closest thing to a permissionless on-ramp already present; the 2% `community_tax` keeps the pool topped up.
+- **Treat `stake` as a participation token, not a reward.** If the no-reward intent is to be taken literally, set inflation to `0`, freeze the genesis supply, and issue fixed "entry-ticket" amounts to vetted validators through governance (identity/Sybil-cost gating instead of economic gating). This reconciles the code with the stated design and dovetails with the permissionless discussion.
+- **Reconcile the docs and params either way.** Decide explicitly between (A) zero-inflation + governance-issued participation tokens, or (B) keep inflation and treat the community pool as the onboarding fund — and document the choice so it is not left as an accident of Cosmos defaults.
+
 ## Out of scope / not problems
 
 A few things readers sometimes ask about but that are not issues here:
 
 - **No proof-of-quantumness.** daqq does not verify that a participant actually ran a quantum computer; it just records what they submitted. This is intentional — the value is the **shared, reproducible trail**, not adjudication.
-- **Validator centralisation.** Cosmos SDK governance / staking applies as normal. daqq does not change validator economics because there is no reward to distribute.
-- **No native token.** Treated as a feature, not a bug. See [Overview → Why no rewards?]({{< relref "overview#why-no-rewards" >}}).
+- **Validator centralisation.** Cosmos SDK governance / staking applies as normal. daqq inherits standard validator economics; how new validators are funded (and how that squares with the no-reward framing) is tracked as Issue #8 above, not hand-waved as "no reward to distribute".
+- **No native token.** Treated as a feature, not a bug — `stake` is a participation/consensus token with no intended market value. See [Overview → Why no rewards?]({{< relref "overview#why-no-rewards" >}}) and Issue #8.
