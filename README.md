@@ -5,11 +5,17 @@
   </picture>
 </p>
 
+<p align="center">
+  <a href="https://daqq.pages.dev/docs/"><img alt="Documentation" src="https://img.shields.io/badge/Documentation-daqq.pages.dev-6366f1?style=for-the-badge&logo=readthedocs&logoColor=white"></a>
+  <a href="https://daqq.pages.dev/gui/"><img alt="Live GUI" src="https://img.shields.io/badge/Live_GUI-Quantum_Chain_Visualizer-a855f7?style=for-the-badge&logo=googlechrome&logoColor=white"></a>
+  <a href="deploy/JOIN.md"><img alt="Join the network" src="https://img.shields.io/badge/Join-the_network-10b981?style=for-the-badge"></a>
+</p>
+
 # daqq
 
 **daqq** is a project exploring quantum applications and blockchain integration. It contains a Random Quantum Circuit generator and a Cosmos SDK-based blockchain.
 
-Full documentation lives under [`docs/`](docs/) and is published via Cloudflare Pages — see [docs/README.md](docs/README.md) for build and deploy instructions.
+Full documentation is published at **[daqq.pages.dev](https://daqq.pages.dev/docs/)** (source under [`docs/`](docs/)), and the live network visualizer runs at **[daqq.pages.dev/gui](https://daqq.pages.dev/gui/)**. See [docs/README.md](docs/README.md) for build and deploy instructions.
 
 **Want to join the live network?** You can run a full node that syncs
 `quantum-chain` — no stake, no reward, no ports to open on your side. Access is
